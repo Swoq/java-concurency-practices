@@ -5,12 +5,14 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SubjectPointsMain {
     public static void main(String[] args) throws InterruptedException {
+        // List.of returns immutable list, so thread safe
         List<Group> groups = List.of(
                 new Group("ІP-91", 25),
                 new Group("ІP-92", 30),
@@ -21,13 +23,16 @@ public class SubjectPointsMain {
         int nWeeks = 3;
 
         Thread t = new Thread(() -> {
+            // creating parallel threads
             List<Thread> threads = List.of(
                     (new Thread(new Teacher("Lecturer 1", Arrays.asList("ІP-91", "ІP-92", "ІP-93"), nWeeks, journal))),
                     (new Thread(new Teacher("Assistant 1", Collections.singletonList("ІP-91"), nWeeks, journal))),
                     (new Thread(new Teacher("Assistant 2", Collections.singletonList("ІP-92"), nWeeks, journal))),
                     (new Thread(new Teacher("Assistant 3", Collections.singletonList("ІP-93"), nWeeks, journal)))
             );
+            // starting them
             threads.forEach(Thread::start);
+            // joining until all of them will be finished
             threads.forEach(thread -> {
                 try {
                     thread.join();
@@ -35,7 +40,6 @@ public class SubjectPointsMain {
                     e.printStackTrace();
                 }
             });
-
         });
 
         t.start();
@@ -65,7 +69,7 @@ class Group {
 
 @Getter
 class Journal {
-    private final Map<String, Group> groups = new ConcurrentHashMap<>();
+    private final Map<String, Group> groups = new HashMap<>();
 
     public Journal(List<Group> groups) {
         for (Group group : groups) {
@@ -109,7 +113,7 @@ class Teacher implements Runnable {
     public void run() {
         for (int i = 0; i < nWeeks; i++) {
             for (String groupName : groupNames) {
-                for (Integer studentName : this.journal.getGroups().get(groupName).getGroupList().keySet()) {
+                for (Integer studentName : journal.getGroups().get(groupName).getGroupList().keySet()) {
                     Double mark = (double) (Math.round(100 * Math.random() * 100)) / 100;
                     journal.addMark(groupName, studentName, mark + " (" + this.teacherName + ")");
                 }

@@ -1,13 +1,15 @@
 package com.swoqe.third;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  author Cay Horstmann
  */
 public class AsyncBankMain {
-    public static final int NACCOUNTS = 10;
+    public static final int NACCOUNTS = 14;
     public static final int INITIAL_BALANCE = 10000;
 
     public static void main(String[] args) {
@@ -15,7 +17,7 @@ public class AsyncBankMain {
         for (int i = 0; i < NACCOUNTS; i++) {
             TransferThread t = new TransferThread(b, i, INITIAL_BALANCE);
             t.setPriority(Thread.NORM_PRIORITY + i % 2);
-            t.start() ;
+            t.start();
         }
     }
 }
@@ -23,56 +25,78 @@ public class AsyncBankMain {
 class Bank {
 
     public static final int NTEST = 100000;
-    private final Account[] accounts;
-//    private final AtomicIntegerArray accounts;
-    private long ntransacts = 0;
+    private final AtomicIntegerArray accounts;
+    private final AtomicInteger transactionsNum = new AtomicInteger(0);
+    //    private final Account[] accounts;
 
     public Bank(int n, int initialBalance) {
-        accounts = new Account[n];
-        Arrays.fill(accounts, new Account(initialBalance));
+        accounts = new AtomicIntegerArray(n);
+        for (int i = 0; i < accounts.length(); i++) {
+            accounts.set(i, initialBalance);
+        }
+//         Arrays.fill(accounts, new Account(initialBalance));
     }
 
     public void transfer(int from, int to, int amount) {
+        accounts.getAndAdd(from, -amount);
+        accounts.getAndAdd(to, amount);
+        transactionsNum.getAndIncrement();
+        if (transactionsNum.get() % NTEST == 0)
+            test();
+    }
+
+/*    public void transfer(int from, int to, int amount) {
         accounts[from].reentrantLock.lock();
         accounts[to].reentrantLock.lock();
 
         accounts[from].setAccount(accounts[from].getAccount() - amount);
         accounts[to].setAccount(accounts[to].getAccount() + amount);
-        ntransacts++;
-        if (ntransacts % NTEST == 0) test();
+        transactionsNum.incrementAndGet();
 
         accounts[from].reentrantLock.unlock();
         accounts[to].reentrantLock.unlock();
+
+        if (transactionsNum.get() % NTEST == 0)
+            test();
     }
 
+    public synchronized void transfer(int from, int to, int amount) {
+        accounts[from] -= amount;
+        accounts[to] += amount;
+        ntransacts++;
+        if (ntransacts % NTEST == 0) test();
+    }
+*/
+
     public void test() {
-        int sum = 0;
-        for (Account account : accounts)
-            sum += account.getAccount();
-        System.out.println("Transactions:" + ntransacts + " Sum: " + sum);
+        AtomicInteger sum = new AtomicInteger(0);
+        for (int i = 0; i < accounts.length(); i++)
+            sum.addAndGet(accounts.get(i));
+        System.out.println("Transactions:" + transactionsNum.get() + " Sum: " + sum.get());
     }
 
     public int size() {
-        return accounts.length;
+        return accounts.length();
     }
 
-    static class Account {
-        private long account;
-        private final ReentrantLock reentrantLock = new ReentrantLock(true);
+}
 
-        public Account(long account) {
-            this.account = account;
-        }
+class Account {
+    private long account;
+    private final ReentrantLock reentrantLock = new ReentrantLock(true);
 
-        public void setAccount(long account) {
-            this.account = account;
-        }
-
-        public long getAccount() {
-            return account;
-        }
-
+    public Account(long account) {
+        this.account = account;
     }
+
+    public void setAccount(long account) {
+        this.account = account;
+    }
+
+    public long getAccount() {
+        return account;
+    }
+
 }
 
 class TransferThread extends Thread {
@@ -89,7 +113,7 @@ class TransferThread extends Thread {
 
     @Override
     public void run() {
-        while (true) {
+        for (int j = 0; j < 100; j++) {
             for (int i = 0; i < REPS; i++) {
                 int toAccount = (int) (bank.size() * Math.random());
                 int amount = (int) (maxAmount * Math.random() / REPS);

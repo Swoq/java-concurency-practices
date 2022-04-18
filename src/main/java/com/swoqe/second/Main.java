@@ -9,6 +9,8 @@ import org.ejml.simple.SimpleMatrix;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.swoqe.util.TimeUtil.recordTime;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -63,12 +65,6 @@ public class Main {
 
         System.out.println("\n");
         return results;
-    }
-
-    private static long recordTime(Runnable runnable) {
-        long currTime = System.nanoTime();
-        runnable.run();
-        return System.nanoTime() - currTime;
     }
 
 }
