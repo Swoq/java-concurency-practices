@@ -25,24 +25,26 @@ public class AsyncBankMain {
 class Bank {
 
     public static final int NTEST = 100000;
-    private final AtomicIntegerArray accounts;
+    private final int[] accounts;
     private final AtomicInteger transactionsNum = new AtomicInteger(0);
     //    private final Account[] accounts;
 
+    private final static Object monitor = new Object();
+
     public Bank(int n, int initialBalance) {
-        accounts = new AtomicIntegerArray(n);
-        for (int i = 0; i < accounts.length(); i++) {
-            accounts.set(i, initialBalance);
-        }
+        accounts = new int[n];
+        Arrays.fill(accounts, initialBalance);
 //         Arrays.fill(accounts, new Account(initialBalance));
     }
 
     public void transfer(int from, int to, int amount) {
-        accounts.getAndAdd(from, -amount);
-        accounts.getAndAdd(to, amount);
-        transactionsNum.getAndIncrement();
-        if (transactionsNum.get() % NTEST == 0)
-            test();
+        synchronized (monitor) {
+            accounts[from] += -amount;
+            accounts[to] += amount;
+            transactionsNum.getAndIncrement();
+            if (transactionsNum.get() % NTEST == 0)
+                test();
+        }
     }
 
 /*    public void transfer(int from, int to, int amount) {
@@ -70,13 +72,13 @@ class Bank {
 
     public void test() {
         AtomicInteger sum = new AtomicInteger(0);
-        for (int i = 0; i < accounts.length(); i++)
-            sum.addAndGet(accounts.get(i));
+        for (int i = 0; i < accounts.length; i++)
+            sum.addAndGet(accounts[i]);
         System.out.println("Transactions:" + transactionsNum.get() + " Sum: " + sum.get());
     }
 
     public int size() {
-        return accounts.length();
+        return accounts.length;
     }
 
 }

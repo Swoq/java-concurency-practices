@@ -1,14 +1,15 @@
 package com.swoqe.third;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class SubjectPointsMain {
     public static void main(String[] args) throws InterruptedException {
@@ -52,7 +53,7 @@ public class SubjectPointsMain {
 @Getter
 class Group {
     private final String groupName;
-    private final Map<Integer, List<String>> groupList = new ConcurrentHashMap<>();
+    private final List<Student> students = new ArrayList<>();
 
     public Group(String groupName, int sizeOfGroup) {
         this.groupName = groupName;
@@ -61,8 +62,23 @@ class Group {
 
     private void generateGroupList(int sizeOfGroup) {
         for (int i = 0; i < sizeOfGroup; i++) {
-            this.groupList.put(i + 1, new ArrayList<>());
+            this.students.add(new Student(i));
         }
+    }
+
+}
+
+@Getter
+class Student {
+    private final Integer number;
+    private final List<String> marks = new ArrayList<>();
+
+    Student(Integer number) {
+        this.number = number;
+    }
+
+    synchronized void addMark(String mark) {
+        this.marks.add(mark);
     }
 
 }
@@ -78,15 +94,15 @@ class Journal {
     }
 
     public void addMark(String groupName, Integer studentName, String mark) {
-        this.groups.get(groupName).getGroupList().get(studentName).add(mark);
+        this.groups.get(groupName).getStudents().get(studentName).addMark(mark);
     }
 
     public void show() {
         for (String groupName : groups.keySet().stream().sorted().toList()) {
             System.out.printf("Group name: %6s\n", groupName);
-            for (Integer studentName : groups.get(groupName).getGroupList().keySet().stream().sorted().toList()) {
-                System.out.printf("Student %5s %5s", studentName, "-");
-                for (String mark : groups.get(groupName).getGroupList().get(studentName)) {
+            for (Student student : groups.get(groupName).getStudents().stream().sorted(Comparator.comparing(Student::getNumber)).toList()) {
+                System.out.printf("Student %5s %5s", student.getNumber(), "-");
+                for (String mark : student.getMarks()) {
                     System.out.printf("%30s", mark);
                 }
                 System.out.println();
@@ -113,9 +129,9 @@ class Teacher implements Runnable {
     public void run() {
         for (int i = 0; i < nWeeks; i++) {
             for (String groupName : groupNames) {
-                for (Integer studentName : journal.getGroups().get(groupName).getGroupList().keySet()) {
+                for (Student student : journal.getGroups().get(groupName).getStudents()) {
                     Double mark = (double) (Math.round(100 * Math.random() * 100)) / 100;
-                    journal.addMark(groupName, studentName, mark + " (" + this.teacherName + ")");
+                    journal.addMark(groupName, student.getNumber(), mark + " (" + this.teacherName + ")");
                 }
             }
         }

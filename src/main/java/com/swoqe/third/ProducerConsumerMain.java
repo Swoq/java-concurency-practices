@@ -5,7 +5,7 @@ import java.util.Random;
 public class ProducerConsumerMain {
     public static void main(String[] args) {
         Drop drop = new Drop();
-        Producer producer = new Producer(drop, 5000);
+        Producer producer = new Producer(drop, 10);
         Consumer consumer = new Consumer(drop);
 
         new Thread(producer).start();
@@ -80,11 +80,6 @@ class Producer implements Runnable {
 
         for (int s : importantInfo) {
             drop.put(s);
-            try {
-                Thread.sleep(random.nextInt(10));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
         drop.put(Integer.MAX_VALUE);
     }
@@ -98,14 +93,8 @@ class Consumer implements Runnable {
     }
 
     public void run() {
-        Random random = new Random();
         for (int message = drop.take(); message != Integer.MAX_VALUE; message = drop.take()) {
             System.out.format("MESSAGE RECEIVED: %s%n", message);
-            try {
-                Thread.sleep(random.nextInt(10));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 }
